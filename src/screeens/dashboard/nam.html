@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Irrigation Dashboard</h1>
+        <div class="data">
+            <p>Temperature: <span id="temperature">--</span>°C</p>
+            <p>Humidity: <span id="humidity">--</span>%</p>
+            <p>Soil Moisture: <span id="soilMoisture">--</span>%</p>
+        </div>
+        <div class="status">
+            <p>Relay Status: <span id="relayStatus">--</span></p>
+        </div>
+        <button class="btn" onclick="togglePump()">Toggle Pump</button>
+    </div>
+
+    <script>
+        // Kết nối tới broker MQTT
+        const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+            username: 'nam', // Thay bằng username của bạn
+            password: 'nam', // Thay bằng password của bạn
+        });
+
+        // Các topic để theo dõi
+        const topicTemperature = 'sensor/temperature';
+        const topicHumidity = 'sensor/humidity';
+        const topicSoilMoisture = 'sensor/soilMoisture';
+        const topicRelayStatus = 'status/relay';
+
+        // Kết nối thành công
+        client.on('connect', () => {
+            console.log('Connected to MQTT broker');
+            client.subscribe(topicTemperature);
+            client.subscribe(topicHumidity);
+            client.subscribe(topicSoilMoisture);
+            client.subscribe(topicRelayStatus);
+        });
+
+        // Lắng nghe dữ liệu từ MQTT
+        client.on('message', (topic, message) => {
+            const payload = message.toString();
+            if (topic === topicTemperature) {
+                document.getElementById('temperature').textContent = payload;
+            } else if (topic === topicHumidity) {
+                document.getElementById('humidity').textContent = payload;
+            } else if (topic === topicSoilMoisture) {
+                document.getElementById('soilMoisture').textContent = payload;
+            } else if (topic === topicRelayStatus) {
+                document.getElementById('relayStatus').textContent = payload === 'ON' ? 'Pump is ON' : 'Pump is OFF';
+            }
+        });
+
+        // Điều khiển máy bơm (tự động gửi lệnh)
+        function togglePump() {
+            const relayStatus = document.getElementById('relayStatus').textContent;
+            const newStatus = relayStatus === 'Pump is ON' ? 'OFF' : 'ON';
+            client.publish('status/relay', newStatus);
+            console.log('Relay toggled to: ${newStatus}');
+        }
+    </script>
+</body>
+</html>
