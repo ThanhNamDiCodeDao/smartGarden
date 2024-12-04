@@ -1,7 +1,7 @@
 import React from 'react';
 import {Routes, Route } from 'react-router-dom';
-import Dashboard from '../dashboard/dashboard';
-import Graph from '../graph/graph';
+import Dashboard from '../screeens/dashboard/dashboard';
+import Graph from '../screeens/graph/graph';
 const AppRoutes = () => (
     <Routes>
       <Route path="/dashboard" element={<Dashboard />} />

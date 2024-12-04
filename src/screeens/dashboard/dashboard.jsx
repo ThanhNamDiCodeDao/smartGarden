@@ -1,11 +1,69 @@
 import React, { useState } from 'react';
+import mqtt from 'mqtt/dist/mqtt.min';
 
 const Dashboard = () => {
   const [autoWatering, setAutoWatering] = useState(false);
-  const [manualWatering, setManualWatering] = useState(false);
+  const [temperature, setTemperature] = useState('');
+  const [humidity, setHumidity] = useState('');
+  const [soilMoisture, setSoilMoisture] = useState('');
+  const [relayStatus, setRelayStatus] = useState('OFF');
 
-  const toggleAutoWatering = () => setAutoWatering(!autoWatering);
-  const toggleManualWatering = () => setManualWatering(!manualWatering);
+  useEffect(() => {
+    // Connect to MQTT broker
+    const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      username: 'nam',
+      password: 'nam',
+    });
+
+    const topicTemperature = 'sensor/temperature';
+    const topicHumidity = 'sensor/humidity';
+    const topicSoilMoisture = 'sensor/soilMoisture';
+    const topicRelayStatus = 'status/relay';
+
+    // Subscribe to topics on successful connection
+    client.on('connect', () => {
+      console.log('Connected to MQTT broker');
+      client.subscribe([topicTemperature, topicHumidity, topicSoilMoisture, topicRelayStatus]);
+    });
+
+    // Handle incoming messages
+    client.on('message', (topic, message) => {
+      const payload = message.toString();
+      if (topic === topicTemperature) {
+        setTemperature(payload);
+      } else if (topic === topicHumidity) {
+        setHumidity(payload);
+      } else if (topic === topicSoilMoisture) {
+        setSoilMoisture(payload);
+      } else if (topic === topicRelayStatus) {
+        setRelayStatus(payload === 'ON' ? 'ON' : 'OFF');
+      }
+    });
+
+    // Clean up on unmount
+    return () => {
+      client.end();
+    };
+  }, []);
+
+  // Toggle the pump state
+  const togglePump = () => {
+    const newStatus = relayStatus === 'ON' ? 'OFF' : 'ON';
+    const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      username: 'nam',
+      password: 'nam',
+    });
+    client.publish('status/relay', newStatus);
+    console.log(`Relay toggled to: ${newStatus}`);
+    setRelayStatus(newStatus);
+  };
+
+  // Handle the automated watering toggle
+  const toggleAutoWatering = () => {
+    setAutoWatering((prev) => !prev);
+    togglePump(); // Optionally toggle the pump when auto-watering changes
+  };
+
 
   return (
     <div className="bg-bg-gray text-white p-6 size-full">
